@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Anvi's Prelim Tracker</title>
+<meta name="theme-color" content="#0D5C7B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Prelim Tracker">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow column built for a phone. Score tiles on top, three tabs (Exams, Upcoming, Events), cards that read like lines on a report card. */
+:root {
+  color-scheme: light;
+  --bg: #F1F4F8;
+  --surface: #FFFFFF;
+  --ink: #17202E;
+  --muted: #5A6577;
+  --line: #D8DEE8;
+  --accent: #0D5C7B;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #DFEEF4;
+  --warn: #A85A08;
+  --warn-soft: #FBEAD2;
+  --bad: #B3302A;
+  --good: #1D7547;
+  --good-soft: #DCF0E4;
+  --classes: #5646C2;
+  --classes-soft: #E8E5FA;
+  --school: #CF4F25;
+  --school-soft: #FCE5DB;
+  --font-display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151E; --surface: #18202C; --ink: #E8EDF4; --muted: #99A5B8; --line: #2A3445;
+    --accent: #5CB8DA; --accent-ink: #08212C; --accent-soft: #17323F;
+    --warn: #F0AE5C; --warn-soft: #3A2A14; --bad: #F07F76; --good: #6FD39A; --good-soft: #17301F;
+    --classes: #AB9EFF; --classes-soft: #2B2653; --school: #FF9C72; --school-soft: #432519;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151E; --surface: #18202C; --ink: #E8EDF4; --muted: #99A5B8; --line: #2A3445;
+  --accent: #5CB8DA; --accent-ink: #08212C; --accent-soft: #17323F;
+  --warn: #F0AE5C; --warn-soft: #3A2A14; --bad: #F07F76; --good: #6FD39A; --good-soft: #17301F;
+  --classes: #AB9EFF; --classes-soft: #2B2653; --school: #FF9C72; --school-soft: #432519;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45;
+  padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
+h1 { font-size: 28px; line-height: 1.1; letter-spacing: -0.01em; }
+h2 { font-size: 18px; }
+.eyebrow { margin: 0 0 4px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.banner { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.stat.main { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.stat.classes { border-top: 4px solid var(--classes); }
+.stat.classes .val { color: var(--classes); }
+.stat.school { border-top: 4px solid var(--school); }
+.stat.school .val { color: var(--school); }
+.pill.classes { background: var(--classes-soft); color: var(--classes); }
+.pill.school { background: var(--school-soft); color: var(--school); }
+.card.exam { border-left: 5px solid var(--sub, var(--line)); }
+.head-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.theme-btn { height: 34px; padding: 0 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; flex: none; }
+.stat .lbl { font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; font-weight: 600; opacity: 0.8; }
+.stat .val { font-family: var(--font-mono); font-size: 26px; font-weight: 500; line-height: 1.15; margin-top: 2px; }
+.stat .sub { font-size: 12px; opacity: 0.8; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tab { flex: 1; background: none; border: 0; border-bottom: 3px solid transparent; padding: 10px 4px; font: 600 15px var(--font-body); color: var(--muted); cursor: pointer; }
+.tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.tab .dot { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 9px; background: var(--warn); color: var(--surface); font-size: 12px; line-height: 18px; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.filters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); min-width: 0; }
+input[type="text"], input[type="date"], input[type="number"], select {
+  width: 100%; min-width: 0; height: 42px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--bg); color: var(--ink); font-size: 16px; text-transform: none; letter-spacing: 0; font-weight: 400;
+}
+.btn { height: 42px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); font-weight: 600; cursor: pointer; }
+.btn.small { height: 34px; padding: 0 12px; font-size: 14px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end; }
+.form-grid .wide { grid-column: 1 / -1; }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+.crumb { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sdot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.exam-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.exam-title { font-family: var(--font-display); font-size: 17px; font-weight: 600; }
+.pill { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 12px; font-weight: 600; background: var(--accent-soft); color: var(--accent); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.bad { background: var(--warn-soft); color: var(--bad); }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.row > * { min-width: 0; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { height: 42px; padding: 0 16px; border: 0; background: var(--bg); color: var(--muted); font-weight: 600; cursor: pointer; }
+.seg button[aria-pressed="true"].yes { background: var(--good); color: var(--surface); }
+.seg button[aria-pressed="true"].no { background: var(--bad); color: var(--surface); }
+.marks { display: flex; align-items: flex-end; gap: 8px; }
+.marks input { width: 84px; text-align: center; font-family: var(--font-mono); }
+.marks .of { padding-bottom: 10px; color: var(--muted); }
+.pct { font-family: var(--font-mono); font-size: 22px; font-weight: 500; padding-bottom: 6px; }
+.del { background: none; border: 0; color: var(--muted); font-size: 13px; cursor: pointer; padding: 6px; text-decoration: underline; }
+.del.armed { color: var(--bad); font-weight: 600; }
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.bar-row { display: grid; grid-template-columns: minmax(0, 1fr) 54px; gap: 4px 10px; align-items: center; }
+.bar-row .name { display: flex; align-items: center; gap: 8px; font-size: 14px; min-width: 0; }
+.bar-row .name span:last-child { overflow-wrap: anywhere; }
+.bar-track { grid-column: 1 / -1; height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+.item { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; align-items: center; }
+.datebox { text-align: center; border-radius: 8px; padding: 6px 0; background: var(--bg); border: 1px solid var(--line); }
+.datebox .d { font-family: var(--font-mono); font-size: 20px; font-weight: 500; line-height: 1.1; }
+.datebox .m { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.item.soon .datebox { background: var(--warn-soft); border-color: var(--warn); }
+.item.soon .datebox .m { color: var(--warn); }
+.item-title { font-weight: 600; overflow-wrap: anywhere; }
+.item-meta { font-size: 13px; color: var(--muted); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.section-label { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; color: var(--muted); margin: 4px 0 0; }
+.empty { text-align: center; color: var(--muted); padding: 22px 12px; border: 1px dashed var(--line); border-radius: 10px; }
+.empty strong { display: block; color: var(--ink); font-family: var(--font-display); font-size: 17px; margin-bottom: 4px; }
+.help { font-size: 13px; color: var(--muted); margin: 0; }
+.foot { text-align: center; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 14px; z-index: 20; max-width: calc(100% - 32px); }
+@media (max-width: 380px) { .stat .val { font-size: 22px; } h1 { font-size: 25px; } }
+@media (prefers-reduced-motion: no-preference) { .bar-fill { transition: width 0.3s ease; } }
+</style>
+</head>
+<body>
+<main>
+  <header class="head-row">
+    <div>
+      <p class="eyebrow">ICSE Class 10 · Boards 2027</p>
+      <h1>Anvi's Prelim Tracker</h1>
+    </div>
+    <button type="button" class="theme-btn" id="themeBtn" aria-label="Switch between light and dark theme">Switch theme</button>
+  </header>
+  <div id="banner"></div>
+  <section class="stats" id="stats" aria-label="Score summary"></section>
+  <div class="tabs" role="tablist" id="tabs">
+    <button class="tab" role="tab" data-tab="exams" id="tab-exams">Exams</button>
+    <button class="tab" role="tab" data-tab="upcoming" id="tab-upcoming">Upcoming</button>
+    <button class="tab" role="tab" data-tab="events" id="tab-events">Events</button>
+  </div>
+  <section id="view"></section>
+  <p class="help foot" id="foot"></p>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ============================================================
+   STEP 1 of setup: paste your Firebase web app details below.
+   See SETUP.md. Replace each PASTE_HERE with your own value.
+   These values are not secrets. Do NOT put the family code here.
+   ============================================================ */
+var CONFIG = {
+  apiKey: "PASTE_HERE",
+  authDomain: "PASTE_HERE",
+  projectId: "PASTE_HERE",
+  storageBucket: "PASTE_HERE",
+  messagingSenderId: "PASTE_HERE",
+  appId: "PASTE_HERE"
+};
+</script>
+<script>
+(function () {
+  var CLASSES = ['Physics', 'Chemistry', 'Maths', 'English'];
+  var SCHOOL = ['English Language', 'English Literature', 'Hindi / Marathi', 'History & Civics', 'Geography', 'Maths', 'Physics', 'Chemistry', 'Biology', 'Computer Applications'];
+  var NAMES = ['Prelim 1', 'Prelim 2', 'Prelim 3', 'Unit Test'];
+  var MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+  var fdb = null, familyCode = '', memCode = '', started = false, local = false;
+  var canWrite = true;
+  var exams = [], events = [], loaded = { exams: false, events: false };
+  var tab = 'exams', scope = 'classes', subj = 'all', armed = null, armTimer = null, toastTimer = null;
+
+  var $ = function (s) { return document.querySelector(s); };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function isNum(v) { return typeof v === 'number' && isFinite(v); }
+  function dayDiff(s) {
+    if (!s) return null;
+    var p = s.split('-').map(Number), t = new Date();
+    return Math.round((Date.UTC(p[0], p[1] - 1, p[2]) - Date.UTC(t.getFullYear(), t.getMonth(), t.getDate())) / 864e5);
+  }
+  function when(n) {
+    if (n === null) return '';
+    if (n === 0) return 'Today';
+    if (n === 1) return 'Tomorrow';
+    if (n > 1) return 'In ' + n + ' days';
+    return Math.abs(n) + (n === -1 ? ' day ago' : ' days ago');
+  }
+  function hue(s) { var h = 7; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h; }
+  function dot(s) { return '<span class="sdot" style="background:hsl(' + hue(s) + ' 55% 50%)"></span>'; }
+  function scopeLabel(s) { return s === 'school' ? 'School' : 'Classes'; }
+
+  function subjectsFor(sc) {
+    var base = sc === 'school' ? SCHOOL.slice() : CLASSES.slice();
+    exams.forEach(function (e) { if (e.scope === sc && e.subject && base.indexOf(e.subject) < 0) base.push(e.subject); });
+    return base;
+  }
+  function counted(e) {
+    return e.attended === 'yes' && isNum(e.marks) && isNum(e.outOf) && e.outOf > 0 && e.marks <= e.outOf;
+  }
+  function score(list) {
+    var g = 0, t = 0, n = 0;
+    list.forEach(function (e) { if (counted(e)) { g += e.marks; t += e.outOf; n++; } });
+    return { pct: t ? (g / t) * 100 : null, n: n, g: g, t: t };
+  }
+  function fmtPct(p) { return p === null ? '—' : (Math.round(p * 10) / 10) + '%'; }
+  function toast(msg) {
+    var el = $('#toast'); el.textContent = msg; el.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.hidden = true; }, 3500);
+  }
+
+  /* ---------- data (Firebase Firestore) ---------- */
+  /* This-phone-only mode: same interface as Firestore, backed by localStorage. */
+  var localCols = {};
+  function makeLocalCol(name) {
+    var key = 'prelim-local-' + name, subs = [];
+    function read() { try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch (x) { return {}; } }
+    function write(o) { try { localStorage.setItem(key, JSON.stringify(o)); } catch (x) { toast('Could not save on this phone.'); } }
+    function emit() {
+      var o = read();
+      var docs = Object.keys(o).map(function (id) { return { id: id, data: function () { return o[id]; } }; });
+      subs.forEach(function (f) { f({ docs: docs }); });
+    }
+    return {
+      doc: function (id) {
+        return {
+          update: function (d) { var o = read(); if (o[id]) { o[id] = Object.assign({}, o[id], d); write(o); emit(); } return Promise.resolve(); },
+          delete: function () { var o = read(); delete o[id]; write(o); emit(); return Promise.resolve(); }
+        };
+      },
+      add: function (d) {
+        var o = read(), id = 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        o[id] = d; write(o); emit(); return Promise.resolve();
+      },
+      onSnapshot: function (next) { subs.push(next); setTimeout(emit, 0); return function () { }; }
+    };
+  }
+  function colRef(name) {
+    if (local) return localCols[name] || (localCols[name] = makeLocalCol(name));
+    return fdb.collection('families').doc(familyCode).collection(name);
+  }
+  function errMsg(e) { return e && e.code === 'permission-denied' ? 'The database rules are not set up. See SETUP.md, step 3.' : (e && e.message ? e.message : ''); }
+  function save(col, id, data) {
+    if (!fdb && !local) return Promise.resolve();
+    return colRef(col).doc(id).update(data).catch(function (e) { toast('Could not save. ' + errMsg(e)); });
+  }
+  function add(col, data) {
+    if (!fdb && !local) return Promise.resolve();
+    data.createdAt = Date.now();
+    return colRef(col).add(data).catch(function (e) { toast('Could not save. ' + errMsg(e)); });
+  }
+  function remove(col, id) {
+    if (!fdb && !local) return Promise.resolve();
+    return colRef(col).doc(id).delete().catch(function (e) { toast('Could not delete. ' + errMsg(e)); });
+  }
+
+  /* ---------- rendering ---------- */
+  function renderStats() {
+    var c = score(exams.filter(function (e) { return e.scope === 'classes'; }));
+    var s = score(exams.filter(function (e) { return e.scope === 'school'; }));
+    var a = score(exams);
+    function tile(cls, l, r) {
+      return '<div class="stat ' + cls + '"><div class="lbl">' + l + '</div><div class="val">' + fmtPct(r.pct) + '</div><div class="sub">' + r.n + (r.n === 1 ? ' exam' : ' exams') + ' scored</div></div>';
+    }
+    $('#stats').innerHTML = tile('main', 'Overall', a) + tile('classes', 'Classes', c) + tile('school', 'School', s);
+  }
+
+  function upcomingItems() {
+    var out = [], pending = [];
+    exams.forEach(function (e) {
+      var n = dayDiff(e.date);
+      var it = { kind: 'exam', id: e.id, date: e.date, n: n, title: e.subject + ' · ' + e.name, scope: e.scope, subject: e.subject };
+      if (e.attended === 'yes' || e.attended === 'no') return;
+      if (n === null) return;
+      if (n >= 0) out.push(it); else pending.push(it);
+    });
+    events.forEach(function (v) {
+      var n = dayDiff(v.date);
+      if (n !== null && n >= 0) out.push({ kind: 'event', id: v.id, date: v.date, n: n, title: v.title, note: v.note });
+    });
+    out.sort(function (a, b) { return a.n - b.n; });
+    pending.sort(function (a, b) { return b.n - a.n; });
+    return { out: out, pending: pending };
+  }
+
+  function renderTabsBadge() {
+    var u = upcomingItems(), soon = u.out.filter(function (i) { return i.n <= 2; }).length;
+    $('#tab-upcoming').innerHTML = 'Upcoming' + (soon ? '<span class="dot">' + soon + '</span>' : '');
+  }
+
+  function examCard(e) {
+    var n = dayDiff(e.date);
+    var status = '';
+    if (e.attended === 'no') status = '<span class="pill warn">Missed</span>';
+    else if (e.attended === 'yes' && isNum(e.marks) && isNum(e.outOf) && e.marks > e.outOf) status = '<span class="pill bad">Check marks</span>';
+    else if (e.attended !== 'yes' && n !== null && n < 0) status = '<span class="pill warn">Did she attend? Update</span>';
+    else if (e.attended !== 'yes' && n !== null) status = '<span class="pill' + (n <= 2 ? ' warn' : '') + '">' + when(n) + '</span>';
+    else if (e.attended !== 'yes') status = '<span class="pill">Date not set</span>';
+    var p = counted(e) ? (e.marks / e.outOf) * 100 : null;
+    var marksHtml = '';
+    if (e.attended === 'yes') {
+      marksHtml =
+        '<div class="marks"><label class="f">Marks<input type="number" inputmode="decimal" min="0" step="0.5" id="m-' + e.id + '" data-f="marks" data-id="' + e.id + '" value="' + (isNum(e.marks) ? e.marks : '') + '"></label>' +
+        '<span class="of">out of</span>' +
+        '<label class="f">Total<input type="number" inputmode="decimal" min="0" step="0.5" id="o-' + e.id + '" data-f="outOf" data-id="' + e.id + '" value="' + (isNum(e.outOf) ? e.outOf : '') + '"></label>' +
+        '<span class="pct">' + (p === null ? '' : fmtPct(p)) + '</span></div>';
+    }
+    return '<article class="card exam stack" style="--sub:hsl(' + hue(e.subject) + ' 55% 50%)">' +
+      '<div class="exam-head"><div><div class="crumb">' + dot(e.subject) + '<span class="eyebrow" style="margin:0">' + esc(scopeLabel(e.scope)) + ' · ' + esc(e.subject) + '</span></div>' +
+      '<div class="exam-title">' + esc(e.name) + '</div></div>' + status + '</div>' +
+      '<div class="row"><label class="f" style="flex:1 1 150px">Exam date<input type="date" id="d-' + e.id + '" data-f="date" data-id="' + e.id + '" value="' + esc(e.date || '') + '"></label>' +
+      '<div><div class="eyebrow" style="margin-bottom:4px">Attended?</div><div class="seg" role="group" aria-label="Attended">' +
+      '<button type="button" class="yes" data-act="att" data-id="' + e.id + '" data-val="yes" aria-pressed="' + (e.attended === 'yes') + '">Yes</button>' +
+      '<button type="button" class="no" data-act="att" data-id="' + e.id + '" data-val="no" aria-pressed="' + (e.attended === 'no') + '">No</button></div></div></div>' +
+      marksHtml +
+      '<div><button type="button" class="del' + (armed === 'exams/' + e.id ? ' armed' : '') + '" data-act="del" data-col="exams" data-id="' + e.id + '">' + (armed === 'exams/' + e.id ? 'Tap again to delete' : 'Delete exam') + '</button></div>' +
+      '</article>';
+  }
+
+  function renderExamsData() {
+    var list = exams.filter(function (e) { return e.scope === scope && (subj === 'all' || e.subject === subj); });
+    list.sort(function (a, b) {
+      if (!a.date && !b.date) return (a.createdAt || 0) - (b.createdAt || 0);
+      if (!a.date) return 1; if (!b.date) return -1;
+      return a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
+    });
+    var scopeExams = exams.filter(function (e) { return e.scope === scope; });
+    var bd = '';
+    if (subj === 'all' && scopeExams.some(counted)) {
+      var rows = subjectsFor(scope).map(function (s) {
+        var r = score(scopeExams.filter(function (e) { return e.subject === s; }));
+        return r.n ? '<div class="bar-row"><div class="name">' + dot(s) + '<span>' + esc(s) + '</span></div><div class="mono" style="text-align:right">' + fmtPct(r.pct) + '</div><div class="bar-track"><div class="bar-fill" style="width:' + Math.min(100, r.pct) + '%"></div></div></div>' : '';
+      }).join('');
+      bd = '<section class="card stack"><h2>' + scopeLabel(scope) + ' by subject</h2><div class="bars">' + rows + '</div><p class="help">Total marks scored divided by total marks available, for exams she attended.</p></section>';
+    }
+    $('#breakdown').innerHTML = bd;
+    var html;
+    if (!loaded.exams) html = '<div class="empty">Loading…</div>';
+    else if (!list.length) html = '<div class="empty"><strong>No ' + scopeLabel(scope) + ' prelims here yet</strong>Add the first one above, even before the date is announced.</div>';
+    else html = list.map(examCard).join('');
+    $('#list').innerHTML = html;
+  }
+
+  function eventCard(v) {
+    var n = dayDiff(v.date);
+    return '<article class="card stack"><div class="exam-head"><div><div class="exam-title">' + esc(v.title) + '</div>' +
+      (v.note ? '<div class="item-meta">' + esc(v.note) + '</div>' : '') + '</div>' +
+      (n !== null ? '<span class="pill' + (n >= 0 && n <= 2 ? ' warn' : '') + '">' + when(n) + '</span>' : '') + '</div>' +
+      '<label class="f">Date<input type="date" id="vd-' + v.id + '" data-f="date" data-col="events" data-id="' + v.id + '" value="' + esc(v.date || '') + '"></label>' +
+      '<div><button type="button" class="del' + (armed === 'events/' + v.id ? ' armed' : '') + '" data-act="del" data-col="events" data-id="' + v.id + '">' + (armed === 'events/' + v.id ? 'Tap again to delete' : 'Delete event') + '</button></div>' +
+      '</article>';
+  }
+
+  function renderEventsData() {
+    var list = events.slice().sort(function (a, b) { return (a.date || '9999') < (b.date || '9999') ? -1 : 1; });
+    var html;
+    if (!loaded.events) html = '<div class="empty">Loading…</div>';
+    else if (!list.length) html = '<div class="empty"><strong>No events yet</strong>Add Sports Day, Annual Day, a parent-teacher meeting or anything else to remember.</div>';
+    else html = list.map(eventCard).join('');
+    $('#list').innerHTML = html;
+  }
+
+  function itemHtml(it) {
+    var p = it.date.split('-').map(Number);
+    var soon = it.n >= 0 && it.n <= 2;
+    var meta = it.kind === 'exam'
+      ? '<span class="pill ' + it.scope + '">' + scopeLabel(it.scope) + '</span>'
+      : '<span class="pill good">Event</span>' + (it.note ? '<span>' + esc(it.note) + '</span>' : '');
+    return '<div class="card item' + (soon ? ' soon' : '') + '"><div class="datebox"><div class="d">' + p[2] + '</div><div class="m">' + MONTHS[p[1] - 1] + '</div></div>' +
+      '<div><div class="item-title">' + esc(it.title) + '</div><div class="item-meta"><strong style="color:' + (soon ? 'var(--warn)' : 'inherit') + '">' + when(it.n) + '</strong>' + meta + '</div></div></div>';
+  }
+
+  function renderUpcomingData() {
+    var u = upcomingItems(), html = '';
+    if (!loaded.exams || !loaded.events) html = '<div class="empty">Loading…</div>';
+    else {
+      if (u.pending.length) {
+        html += '<p class="section-label">Needs an update</p>' + u.pending.map(function (it) {
+          var p = it.date.split('-').map(Number);
+          return '<div class="card item"><div class="datebox"><div class="d">' + p[2] + '</div><div class="m">' + MONTHS[p[1] - 1] + '</div></div><div><div class="item-title">' + esc(it.title) + '</div><div class="item-meta"><span class="pill warn">' + when(it.n) + '</span><span>Mark attended and add marks in Exams</span></div></div></div>';
+        }).join('');
+      }
+      if (u.out.length) {
+        html += '<p class="section-label">Coming up</p>' + u.out.map(itemHtml).join('');
+        html += '<div class="card stack"><h2>Reminders in Google Calendar</h2><p class="help">Download this list, import it at calendar.google.com (Settings, then Import), then set that calendar\'s notifications for all-day events to 2 days before. Google can send these as phone alerts or emails.</p><div><button type="button" class="btn small" data-act="export">Download calendar file</button></div></div>';
+      } else if (!u.pending.length) {
+        html = '<div class="empty"><strong>Nothing coming up</strong>Dates you add to exams and events show up here, with the next 2 days highlighted.</div>';
+      }
+    }
+    $('#list').innerHTML = html;
+  }
+
+  function renderData() {
+    if (!started) return;
+    renderStats();
+    renderTabsBadge();
+    var ae = document.activeElement, focusId = ae && ae.id, start = null, end = null;
+    try { if (ae && 'selectionStart' in ae) { start = ae.selectionStart; end = ae.selectionEnd; } } catch (x) { start = null; }
+    if (tab === 'exams') renderExamsData();
+    else if (tab === 'events') renderEventsData();
+    else renderUpcomingData();
+    if (focusId) {
+      var el = document.getElementById(focusId);
+      if (el && el !== document.activeElement) { el.focus(); try { if (start !== null) el.setSelectionRange(start, end); } catch (x) { } }
+    }
+  }
+
+  function optionList(arr, sel) {
+    return arr.map(function (s) { return '<option value="' + esc(s) + '"' + (s === sel ? ' selected' : '') + '>' + esc(s) + '</option>'; }).join('');
+  }
+
+  function renderShell() {
+    ['exams', 'upcoming', 'events'].forEach(function (t) { $('#tab-' + t).setAttribute('aria-selected', String(t === tab)); });
+    var v = $('#view');
+    if (tab === 'exams') {
+      var subs = subjectsFor(scope);
+      if (subj !== 'all' && subs.indexOf(subj) < 0) subj = 'all';
+      var addForm =
+        '<form class="card form-grid" id="addExam" autocomplete="off"><h2 class="wide">Add a prelim</h2>' +
+        '<label class="f">Subject<select id="addSubj">' + optionList(subs, subj === 'all' ? subs[0] : subj) + '<option value="__other">Other…</option></select></label>' +
+        '<label class="f">Exam<input type="text" id="addName" list="nameList" placeholder="Prelim 1"><datalist id="nameList">' + NAMES.map(function (n) { return '<option value="' + n + '">'; }).join('') + '</datalist></label>' +
+        '<label class="f wide" id="customWrap" hidden>Subject name<input type="text" id="addCustom" placeholder="e.g. Economics"></label>' +
+        '<label class="f">Date (optional)<input type="date" id="addDate"></label>' +
+        '<div><button class="btn" type="submit" style="width:100%">Add prelim</button></div></form>';
+      v.innerHTML =
+        '<div class="stack"><div class="filters">' +
+        '<label class="f">Prelims at<select id="scope"><option value="classes"' + (scope === 'classes' ? ' selected' : '') + '>Classes (Genesis)</option><option value="school"' + (scope === 'school' ? ' selected' : '') + '>School (Lodha)</option></select></label>' +
+        '<label class="f">Subject<select id="subj"><option value="all">All subjects</option>' + optionList(subs, subj) + '</select></label></div>' +
+        '<div id="breakdown" class="stack"></div>' + addForm + '<div id="list" class="stack"></div></div>';
+    } else if (tab === 'events') {
+      v.innerHTML = '<div class="stack">' +
+        '<form class="card form-grid" id="addEvent" autocomplete="off"><h2 class="wide">Add an event</h2>' +
+        '<label class="f wide">What<input type="text" id="evTitle" placeholder="Sports Day"></label>' +
+        '<label class="f">Date<input type="date" id="evDate"></label>' +
+        '<label class="f">Note (optional)<input type="text" id="evNote" placeholder="Wear house colours"></label>' +
+        '<div class="wide"><button class="btn" type="submit" style="width:100%">Add event</button></div></form>' +
+        '<div id="list" class="stack"></div></div>';
+    } else {
+      v.innerHTML = '<div id="list" class="stack"></div>';
+    }
+    renderData();
+  }
+
+  /* ---------- events ---------- */
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest('[data-tab],[data-act]');
+    if (!t) return;
+    if (t.dataset.tab) { if (!started) return; tab = t.dataset.tab; armed = null; renderShell(); return; }
+    var act = t.dataset.act;
+    if (act === 'att') {
+      var e = exams.find(function (x) { return x.id === t.dataset.id; });
+      if (!e) return;
+      var val = e.attended === t.dataset.val ? '' : t.dataset.val;
+      var patch = { attended: val };
+      if (val !== 'yes') { patch.marks = null; patch.outOf = null; }
+      save('exams', e.id, patch);
+    } else if (act === 'del') {
+      var key = t.dataset.col + '/' + t.dataset.id;
+      if (armed === key) { armed = null; remove(t.dataset.col, t.dataset.id); }
+      else { armed = key; clearTimeout(armTimer); armTimer = setTimeout(function () { armed = null; renderData(); }, 4000); renderData(); }
+    } else if (act === 'export') exportCsv();
+    else if (act === 'forget') { setCode(''); location.reload(); }
+  });
+
+  document.addEventListener('change', function (ev) {
+    var t = ev.target;
+    if (t.id === 'scope') { scope = t.value; subj = 'all'; renderShell(); return; }
+    if (t.id === 'subj') {
+      subj = t.value; renderData();
+      var as = $('#addSubj'); if (as && subj !== 'all') as.value = subj;
+      return;
+    }
+    if (t.id === 'addSubj') { var w = $('#customWrap'); if (w) w.hidden = t.value !== '__other'; return; }
+    if (!t.dataset.f) return;
+    var col = t.dataset.col || 'exams', f = t.dataset.f, v = t.value;
+    if (f === 'marks' || f === 'outOf') v = v === '' ? null : Number(v);
+    var patch = {}; patch[f] = v;
+    save(col, t.dataset.id, patch);
+  });
+
+  document.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var f = ev.target;
+    if (f.id === 'gate') {
+      var c = $('#gateCode').value.trim().toLowerCase();
+      if (!/^[a-z0-9_-]{10,}$/.test(c)) { toast('Use at least 10 letters or digits. No spaces.'); return; }
+      setCode(c);
+      familyCode = c;
+      startApp();
+      return;
+    }
+    if (f.id === 'addExam') {
+      var s = $('#addSubj').value;
+      if (s === '__other') s = $('#addCustom').value.trim();
+      var name = $('#addName').value.trim();
+      if (!s) { toast('Enter a subject name.'); return; }
+      if (!name) { toast('Enter the exam name, for example Prelim 1.'); return; }
+      add('exams', { scope: scope, subject: s, name: name, date: $('#addDate').value || '', attended: '', marks: null, outOf: null }).then(function () {
+        $('#addName').value = ''; $('#addDate').value = ''; $('#addCustom').value = '';
+        if (subj !== 'all' && s !== subj) { subj = 'all'; renderShell(); }
+        toast('Added ' + s + ' · ' + name);
+      });
+    } else if (f.id === 'addEvent') {
+      var title = $('#evTitle').value.trim();
+      if (!title) { toast('Enter what the event is.'); return; }
+      add('events', { title: title, date: $('#evDate').value || '', note: $('#evNote').value.trim() }).then(function () {
+        $('#evTitle').value = ''; $('#evDate').value = ''; $('#evNote').value = '';
+        toast('Event added');
+      });
+    }
+  });
+
+  function exportCsv() {
+    var u = upcomingItems(), rows = [['Subject', 'Start Date', 'All Day Event', 'Description']];
+    u.out.forEach(function (it) {
+      var p = it.date.split('-');
+      var label = it.kind === 'exam' ? (scopeLabel(it.scope) + ' prelim: ' + it.title) : it.title;
+      rows.push([label, p[1] + '/' + p[2] + '/' + p[0], 'True', it.kind === 'exam' ? 'Exam reminder from Anvi\'s Prelim Tracker' : (it.note || 'Event reminder')]);
+    });
+    var csv = rows.map(function (r) { return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(','); }).join('\r\n');
+    try {
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'anvi-prelims-calendar.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+      toast('Saved. Now import it into Google Calendar.');
+    } catch (x) { toast('Could not save the file.'); }
+  }
+
+  /* ---------- theme toggle ---------- */
+  function isDark() {
+    var t = document.documentElement.getAttribute('data-theme');
+    if (t) return t === 'dark';
+    return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+  function paintThemeBtn() { $('#themeBtn').textContent = isDark() ? 'Switch to light' : 'Switch to dark'; }
+  try { var savedTheme = localStorage.getItem('prelim-theme'); if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme); } catch (x) { }
+  $('#themeBtn').addEventListener('click', function () {
+    var next = isDark() ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('prelim-theme', next); } catch (x) { }
+    paintThemeBtn();
+  });
+  paintThemeBtn();
+
+  /* ---------- family code and start-up ---------- */
+  function getCode() { try { return localStorage.getItem('prelim-code') || memCode; } catch (x) { return memCode; } }
+  function setCode(c) { memCode = c; try { if (c) localStorage.setItem('prelim-code', c); else localStorage.removeItem('prelim-code'); } catch (x) { } }
+
+  function showGate() {
+    $('#stats').hidden = true; $('#tabs').hidden = true; $('#foot').innerHTML = '';
+    $('#view').innerHTML =
+      '<form class="card stack" id="gate" autocomplete="off"><h2>Enter the family code</h2>' +
+      '<p class="help">Use the same code on all three phones. It keeps the marks private. Pick something long that only the family knows, at least 10 letters or digits, for example anvi2027-boards-xyz.</p>' +
+      '<label class="f">Family code<input type="text" id="gateCode" autocapitalize="none" autocorrect="off" spellcheck="false"></label>' +
+      '<div><button class="btn" type="submit">Open tracker</button></div></form>';
+  }
+
+  function startApp() {
+    if (started) return;
+    try {
+      if (!local) {
+        if (!firebase.apps.length) firebase.initializeApp(CONFIG);
+        fdb = firebase.firestore();
+      }
+    } catch (x) {
+      $('#banner').innerHTML = '<div class="banner">The Firebase details at the top of index.html look wrong. Check SETUP.md, step 4.</div>';
+      return;
+    }
+    started = true;
+    $('#stats').hidden = false; $('#tabs').hidden = false;
+    $('#foot').innerHTML = local
+      ? 'Marks are saved on this phone only.'
+      : 'Family code ends in …' + esc(familyCode.slice(-3)) + ' · <button type="button" class="del" data-act="forget">Forget code on this phone</button>';
+    function fail(e) { toast('Live updates stopped. ' + errMsg(e)); }
+    colRef('exams').onSnapshot(function (s) {
+      exams = s.docs.map(function (d) { var o = d.data(); o.id = d.id; return o; });
+      loaded.exams = true; renderData();
+    }, fail);
+    colRef('events').onSnapshot(function (s) {
+      events = s.docs.map(function (d) { var o = d.data(); o.id = d.id; return o; });
+      loaded.events = true; renderData();
+    }, fail);
+    renderShell();
+  }
+
+  function configured() {
+    return ['apiKey', 'projectId', 'appId'].every(function (k) { return CONFIG[k] && String(CONFIG[k]).indexOf('PASTE') < 0; });
+  }
+
+  renderStats();
+  if (!configured()) {
+    /* No Firebase details pasted yet: work on this phone only. */
+    local = true;
+    $('#banner').innerHTML = '<div class="banner">Sharing is off. Marks stay on this phone only. To share across phones, finish the Firebase steps in SETUP.md.</div>';
+    startApp();
+  } else if (typeof firebase === 'undefined') {
+    $('#banner').innerHTML = '<div class="banner">Could not load Firebase. Check the internet connection and reload.</div>';
+    $('#stats').hidden = true; $('#tabs').hidden = true;
+  } else {
+    familyCode = getCode();
+    if (familyCode) startApp(); else showGate();
+  }
+})();
+</script>
+</body>
+</html>
